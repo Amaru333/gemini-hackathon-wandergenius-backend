@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(uuid())
+  email            String             @unique
+  passwordHash     String
+  name             String?
+  shareableId      String?            @unique @default(uuid())
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  profile          UserProfile?
+  trips            Trip[]
+  plannedTrips     PlannedTrip[]
+  collaborations   TripCollaborator[]
+  activityVotes    ActivityVote[]
+  reviews          TripReview[]
+  badges           UserBadge[]
+  packingTemplates PackingTemplate[]
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests   String[]
+  hobbies     String[]
+  travelStyle String   @default("budget")
+  constraints String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Trip {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startLocation   String
+  radiusOrTime    String
+  days            Int
+  travelMode      String
+  recommendations Json
+  groundingChunks Json     @default("[]")
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PlannedTrip {
+  id                  String             @id @default(uuid())
+  userId              String
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tripId              String?            // Reference to original Trip (optional)
+  destinationName     String
+  destinationLat      Float?
+  destinationLng      Float?
+  photoUrl            String?
+  days                Int
+  startLocation       String
+  itinerary           Json               // Day-by-day plan
+  checklist           Json               // Array of {id, task, completed, category}
+  isPublic            Boolean            @default(false)
+  isPhotoAlbumPublic  Boolean            @default(false) // Separate privacy for photo album
+  shareId             String?            @unique @default(uuid())
+  budget              TripBudget?
+  collaborators       TripCollaborator[]
+  activityVotes       ActivityVote[]
+  reviews             TripReview[]
+  photos              TripPhoto[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([userId])
+}
+
+model TripBudget {
+  id            String   @id @default(uuid())
+  tripId        String   @unique
+  plannedTrip   PlannedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  totalBudget   Float
+  currency      String   @default("USD")
+  expenses      Expense[]
+  participants  TripParticipant[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TripParticipant {
+  id            String     @id @default(uuid())
+  budgetId      String
+  budget        TripBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  name          String
+  expensesPaid  Expense[]  @relation("PaidBy")
+  createdAt     DateTime   @default(now())
+  
+  @@unique([budgetId, name])
+}
+
+model Expense {
+  id            String     @id @default(uuid())
+  budgetId      String
+  budget        TripBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  amount        Float
+  category      String
+  description   String
+  date          DateTime   @default(now())
+  paidById      String
+  paidBy        TripParticipant @relation("PaidBy", fields: [paidById], references: [id])
+  splitWithIds  String[]   // Array of participant IDs involved in the split
+  createdAt     DateTime   @default(now())
+}
+
+model TripCollaborator {
+  id          String      @id @default(uuid())
+  tripId      String
+  trip        PlannedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String?     // Null until user accepts invite
+  user        User?       @relation(fields: [userId], references: [id])
+  email       String
+  role        String      @default("editor") // "owner" | "editor" | "viewer"
+  inviteToken String      @unique @default(uuid())
+  status      String      @default("pending") // "pending" | "accepted" | "declined"
+  createdAt   DateTime    @default(now())
+
+  @@unique([tripId, email])
+  @@index([tripId])
+}
+
+model ActivityVote {
+  id            String      @id @default(uuid())
+  tripId        String
+  trip          PlannedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  day           Int
+  activityIndex Int
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  vote          String      // "up" | "down"
+  createdAt     DateTime    @default(now())
+
+  @@unique([tripId, day, activityIndex, userId])
+  @@index([tripId])
+}
+
+model TripReview {
+  id               String      @id @default(uuid())
+  tripId           String
+  trip             PlannedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  budgetRating     Int         // 1-5 stars
+  locationRating   Int         // 1-5 stars
+  activitiesRating Int         // 1-5 stars
+  overallRating    Int         // 1-5 stars
+  comment          String?
+  
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  @@unique([tripId, userId])
+  @@index([tripId])
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeType String   // first_trip, jet_setter, world_traveler, critic, top_reviewer, team_player, influencer, explorer
+  earnedAt  DateTime @default(now())
+  
+  @@unique([userId, badgeType])
+  @@index([userId])
+}
+
+model PackingTemplate {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  items     Json     // Array of {id, task, category, completed}
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+}
+
+model TripPhoto {
+  id           String      @id @default(uuid())
+  tripId       String
+  trip         PlannedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  day          Int         // Which day of the trip (1, 2, 3, etc.)
+  imageUrl     String      // Base64 data URL or external URL
+  thumbnailUrl String?     // Smaller version for gallery view
+  caption      String?
+  location     String?     // Location where photo was taken
+  latitude     Float?
+  longitude    Float?
+  takenAt      DateTime?   // When the photo was taken
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@index([tripId])
+  @@index([tripId, day])
+}
