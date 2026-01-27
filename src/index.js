@@ -16,6 +16,7 @@ import badgesRoutes from './routes/badges.js';
 import packingTemplatesRoutes from './routes/packingTemplates.js';
 import photoJournalRoutes from './routes/photoJournal.js';
 import leaderboardsRoutes from './routes/leaderboards.js';
+import smartPackingRoutes from './routes/smartPacking.js';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/badges', badgesRoutes);
 app.use('/api/packing-templates', packingTemplatesRoutes);
 app.use('/api/photo-journal', photoJournalRoutes);
 app.use('/api/leaderboards', leaderboardsRoutes);
+app.use('/api/smart-packing', smartPackingRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
