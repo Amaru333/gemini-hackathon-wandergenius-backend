@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Dev & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
+
+# Environment files (secrets should be in GCP Secret Manager)
+.env
+.env.*
+env.yaml
+
+# Prisma dev files
+prisma/migrations/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+Dockerfile
+dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Tests
+__tests__/
+*.test.js
+*.spec.js
+coverage/

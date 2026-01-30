@@ -2,6 +2,13 @@ import express from 'express';
 
 const router = express.Router();
 
+// Helper to get the base URL from the request (works in both dev and production)
+const getBaseUrl = (req) => {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return `${protocol}://${host}`;
+};
+
 // Proxy endpoint to serve Google Places photos (bypasses CORS)
 router.get('/proxy', async (req, res) => {
   try {
@@ -67,7 +74,8 @@ router.get('/place', async (req, res) => {
     const photoReference = detailsData.result.photos[0].photo_reference;
     
     // Return proxied URL instead of direct Google URL
-    const photoUrl = `http://localhost:5001/api/photos/proxy?photoRef=${encodeURIComponent(photoReference)}&maxWidth=${maxWidth}`;
+    const baseUrl = getBaseUrl(req);
+    const photoUrl = `${baseUrl}/api/photos/proxy?photoRef=${encodeURIComponent(photoReference)}&maxWidth=${maxWidth}`;
 
     res.json({
       photoUrl,
@@ -134,7 +142,8 @@ router.get('/search', async (req, res) => {
 
     const photoReference = place.photos[0].photo_reference;
     // Return proxied URL instead of direct Google URL
-    const photoUrl = `http://localhost:5001/api/photos/proxy?photoRef=${encodeURIComponent(photoReference)}&maxWidth=${maxWidth}`;
+    const baseUrl = getBaseUrl(req);
+    const photoUrl = `${baseUrl}/api/photos/proxy?photoRef=${encodeURIComponent(photoReference)}&maxWidth=${maxWidth}`;
 
     res.json({
       photoUrl,
